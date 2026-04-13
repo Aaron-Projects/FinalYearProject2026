@@ -1,8 +1,4 @@
-# *************************************************
-# *						*
-# *	READ ME FOR FINAL YEAR PROJECT!!!	*
-# *						*
-# *************************************************
+# READ ME FOR FINAL YEAR PROJECT!
  
 For Working On Code:
 -To Run Code, Must Set Directory To File Directory: $ cd /home/*<USER>*/Desktop/*<FOLDERNAME>*
