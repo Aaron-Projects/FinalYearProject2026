@@ -1,4 +1,4 @@
-#BACKUP of Main program for Final Year Project
+#Main program for Final Year Project
 #Contains all modules needed
 
 #necessary libraries
@@ -9,6 +9,8 @@ import cv2
 import numpy as np
 import datetime
 import time
+#import Adafruit_ADS1x15
+#adc = Adafruit_ADS1x15.ADS1115()
 
 #setting up servos
 
@@ -16,27 +18,67 @@ GPIO.setmode(GPIO.BOARD)
 GPIO.setup(32, GPIO.OUT)
 pwm = GPIO.PWM(32, 50)
 pwm.start(7.5)
-
+global current_duty
+current_duty = 2.5
 #rotating servo to center subject in frame, 
 #uses coordinates from box around object
 def rotate_servo(x):
-	if(450 <= x <= 630):
+	if(x>=450 and x <= 510):
 		print("subject in target range!")
 		return 0
 	else:
-		if(x<500):
-			degree = ((540-x)/18)+2.5
-		elif(x>580):
-			degree = ((x-540)/18)+2.5
-		
+		if(x<480):
+			degree = ((480-x)/180)+2.5
+		elif(x>480):
+			degree = ((x-480)/180)+2.5
+		degree = max(2.5, min(degree, 12.5))  # prevents servo going too far
+
+		pwm.ChangeDutyCycle(degree)
+		time.sleep(0.05)
+		pwm.ChangeDutyCycle(0)
+		current_duty = degree
 		
 		pwm.ChangeDutyCycle(degree)
 		time.sleep(0.2)  # Allow the servo to move
-		pwm.ChangeDutyCycle(0)
+		
 		time.sleep(0.2)  # Allow the servo to move
 		return 0
 		
+def servo_angle(angle):
+	if(angle == 0):
+		duty_cycle = 2.5
+	else:
+		duty_cycle = (angle / 18) + 2.5  # Convert angle to duty cycle
+	pwm.ChangeDutyCycle(duty_cycle)
+	time.sleep(0.02)  # Allow the servo to move
+
+
+
+def servo_sweep():
+	try:
+		print('starting sweep')
+		#0 to 180 degrees
+		for angle in range(0, 181):
+			servo_angle(angle)
+			time.sleep(0.01) 
+
+		#180 to 0 degrees
+		for angle in range(180, -1, -1):
+			servo_angle(angle)
+			time.sleep(0.01)
 		
+		print('Finished sweep')
+
+	except KeyboardInterrupt:
+		pwm.ChangeDutyCycle(7.5)	
+		
+def read_voltage():
+	# Read the ADC channel 0
+	value = adc.read_adc(0, gain=1)
+	# Convert raw value to voltage (ADS1115 is 16-bit)
+	voltage = value * (4.096 / 32767.0)
+	return voltage
+	
 #uses means of frames to decide if motion has occured
 def motion_detect(prev_gray, small_gray):
 	if(prev_gray is None):
@@ -84,7 +126,7 @@ def record_video(net, camera):
 		# Add timestamp at bottom left
 		img = cv2.putText(img,
 			datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-			(10, 530),
+			(10, 240),
 			cv2.FONT_HERSHEY_SIMPLEX,
 			0.5,
 			(255, 255, 255),
@@ -119,9 +161,13 @@ def live_cam():
 			frame = camera.Capture()
 			if(frame is None):
 				continue
-
+			
 			jetson_utils.cudaDeviceSynchronize()
-
+			sweep = 0.0
+			#sweep = read_voltage()
+			if(sweep >  0.1):
+				sweep_servo()
+				time.wait(0.2)
 			# Create small grayscale copy for motion detection (CPU)
 			try:
 				img_small = jetson_utils.cudaToNumpy(frame)
@@ -152,7 +198,7 @@ def live_cam():
 			# Add timestamp at bottom left
 			cv2.putText(img_live,
 				time_stamp,
-				(10, 530),
+				(10, 240),
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5,
 				(255, 255, 255),
@@ -160,13 +206,12 @@ def live_cam():
 
 			# Show live feed
 			cv2.imshow("Live Camera", img_live)
-			#display.Render(frame)  # pass original CUDA frame to Jetson display
 			
 			# Check cooldown and record if motion detected
 			if((motion) and (time.time() > motion_cooldown)):
 				print("Motion detected! Starting recording...")
 				cv2.destroyWindow("Live Camera")
-				#record_video(net, camera)
+				record_video(net, camera)
 				motion_cooldown = time.time() + 18  # 10-second cooldown (8 seconds = recording length)
 				prev_gray = None  # reset previous frame after recording
 				
@@ -178,8 +223,7 @@ def live_cam():
 	finally:
 		del camera
 		time.sleep(0.5)
-		#pwm.ChangeDutyCycle(7.5)
-		#pwm.ChangeDutyCycle(0)
+		pwm.ChangeDutyCycle(7.5)
 		pwm.stop()
 		GPIO.cleanup()
 		cv2.destroyAllWindows()
