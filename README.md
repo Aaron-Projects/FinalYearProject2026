@@ -12,10 +12,12 @@ READ ME FOR FINAL YEAR PROJECT!!!
 
 -BACKUPMain.py --> Backup in case something happens to "main" file.  
 
--Recording_2026-03-18_08-25-09.avi --> Captured footage using "main.py" script to demonstrate 
-									   object tracking capability, as well as timestamp
+-Videos:   
+- Project_video.mov --> Footage of servo rotating to track detected objects   
+- Recording_2026-03-18_08-25-09.avi --> Captured footage using "main.py" script to demonstrate    
+									   object tracking capability, as well as timestamp   
 
--Test_bin/:  
+-Test_bin:  
 	*This folder contains old designs and smaller scripts used for experimentation,   
 	most of which later implemented into the main file.* 
 
