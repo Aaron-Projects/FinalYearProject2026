@@ -9,8 +9,8 @@ import cv2
 import numpy as np
 import datetime
 import time
-#import Adafruit_ADS1x15
-#adc = Adafruit_ADS1x15.ADS1115()
+import Adafruit_ADS1x15
+adc = Adafruit_ADS1x15.ADS1115()
 
 #setting up servos
 
