@@ -9,17 +9,34 @@ import cv2
 import numpy as np
 import datetime
 import time
-#import Adafruit_ADS1x15
-#adc = Adafruit_ADS1x15.ADS1115()
+import subprocess
+
+import Adafruit_ADS1x15
+adc = Adafruit_ADS1x15.ADS1115()
 
 #setting up servos
+#if servo does not setup correct, process terminates
+try:
+	GPIO.setmode(GPIO.BOARD)
+	GPIO.setup(32, GPIO.OUT)
+	pwm = GPIO.PWM(32, 50)
+	pwm.start(7.5)
+except:
+	print("ERROR: Cannot setup GPIO pins to correctly operate servo")
+	print("Terminating program to prevent board damage")
+	quit()
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(32, GPIO.OUT)
-pwm = GPIO.PWM(32, 50)
-pwm.start(7.5)
-global current_duty
-current_duty = 2.5
+#restarting nvargus deamon, precaution for repeated camera use
+def reset_nvargus():
+	result=subprocess.run(["sudo", "systemctl", "restart", "nvargus-daemon"],
+		capture_output=True, text=True)
+	if(result.returncode!=0):
+		print("Cannot Restart nvargus-daemon")
+		return 1
+	else: 
+		time.sleep(5) # allows daemon to reset before prematurely opening pipeline
+		return 0
+
 #rotating servo to center subject in frame, 
 #uses coordinates from box around object
 def rotate_servo(x):
@@ -36,11 +53,6 @@ def rotate_servo(x):
 		pwm.ChangeDutyCycle(degree)
 		time.sleep(0.05)
 		pwm.ChangeDutyCycle(0)
-		current_duty = degree
-		
-		pwm.ChangeDutyCycle(degree)
-		time.sleep(0.2)  # Allow the servo to move
-		
 		time.sleep(0.2)  # Allow the servo to move
 		return 0
 		
@@ -220,16 +232,16 @@ def live_cam():
 
 	except KeyboardInterrupt:
 		print("Process Ended by user")
-	finally:
+	finally:#tidying up program. ending processes used by peripherals
+		#prevents bugs/errors in future uses
 		del camera
 		time.sleep(0.5)
 		pwm.ChangeDutyCycle(7.5)
 		pwm.stop()
 		GPIO.cleanup()
 		cv2.destroyAllWindows()
-		print("Program terminated.")
-		
-		
+		print("Program terminated.")	
+			
 def main():
 	live_cam()
 	
