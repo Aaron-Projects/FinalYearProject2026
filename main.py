@@ -10,16 +10,32 @@ import numpy as np
 import datetime
 import time
 import Adafruit_ADS1x15
-adc = Adafruit_ADS1x15.ADS1115()
+
+#Checks if adc is connected
+global adcstatus
+try:
+	adc = Adafruit_ADS1x15.ADS1115()
+	adcstatus = True
+except:
+	print("ERROR: No ADC found, disabling ultrasonic detection")
+	adcstatus = False	#Prevents trying t take nonexistent voltage from pin
+	
 
 #setting up servos
+#if servo does not setup correct, process terminates
+try:
+	GPIO.setmode(GPIO.BOARD)
+	GPIO.setup(32, GPIO.OUT)
+	pwm = GPIO.PWM(32, 50)
+	pwm.start(7.5)
+except:
+	print("ERROR: Cannot setup GPIO pins to correctly operate servo")
+	print("Terminating program to prevent board damage")
+	pwm.stop()
+	GPIO.cleanup()
+	quit()
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(32, GPIO.OUT)
-pwm = GPIO.PWM(32, 50)
-pwm.start(7.5)
-global current_duty
-current_duty = 2.5
+
 #rotating servo to center subject in frame, 
 #uses coordinates from box around object
 def rotate_servo(x):
@@ -36,11 +52,6 @@ def rotate_servo(x):
 		pwm.ChangeDutyCycle(degree)
 		time.sleep(0.05)
 		pwm.ChangeDutyCycle(0)
-		current_duty = degree
-		
-		pwm.ChangeDutyCycle(degree)
-		time.sleep(0.2)  # Allow the servo to move
-		
 		time.sleep(0.2)  # Allow the servo to move
 		return 0
 		
@@ -51,7 +62,6 @@ def servo_angle(angle):
 		duty_cycle = (angle / 18) + 2.5  # Convert angle to duty cycle
 	pwm.ChangeDutyCycle(duty_cycle)
 	time.sleep(0.02)  # Allow the servo to move
-
 
 
 def servo_sweep():
@@ -73,11 +83,14 @@ def servo_sweep():
 		pwm.ChangeDutyCycle(7.5)	
 		
 def read_voltage():
-	# Read the ADC channel 0
-	value = adc.read_adc(0, gain=1)
-	# Convert raw value to voltage (ADS1115 is 16-bit)
-	voltage = value * (4.096 / 32767.0)
-	return voltage
+	if(adcstatus == True):
+		# Read the ADC channel 0
+		value = adc.read_adc(0, gain=1)
+		# Convert raw value to voltage (ADS1115 is 16-bit)
+		voltage = value * (4.096 / 32767.0)
+		return voltage
+	else:
+		return 0
 	
 #uses means of frames to decide if motion has occured
 def motion_detect(prev_gray, small_gray):
@@ -114,15 +127,18 @@ def record_video(net, camera):
 		img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
 		img = cv2.resize(img, (960, 540))
 
+		
 		# Draw detections
 		for d in detections:
 			left, top, right, bottom = int(d.Left), int(d.Top), int(d.Right), int(d.Bottom)
 			cv2.rectangle(img, (left, top), (right, bottom), (0, 255, 0), 2)
 			object_x = int(round((d.Left + d.Right) / 2))  # update object x-coordinate
 		print("object at x: ", object_x)
+		#moving camera to centre object
 		if(time.time() > servo_cooldown):
 			rotate_servo(object_x)
 			servo_cooldown = (time.time() + 0.5) # gives servo time to move
+		
 		# Add timestamp at bottom left
 		img = cv2.putText(img,
 			datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -163,9 +179,9 @@ def live_cam():
 				continue
 			
 			jetson_utils.cudaDeviceSynchronize()
-			sweep = 0.0
-			#sweep = read_voltage()
-			if(sweep >  0.1):
+			voltage = 0.0
+			voltage = read_voltage()
+			if(voltage >  0.1):
 				sweep_servo()
 				time.wait(0.2)
 			# Create small grayscale copy for motion detection (CPU)
@@ -187,14 +203,18 @@ def live_cam():
 			img_live = cv2.cvtColor(img_live, cv2.COLOR_RGBA2BGR)
 			img_live = cv2.resize(img_live, (960, 540))
 
+
+			# Draw detections
 			for d in detections:
 				left, top, right, bottom = int(d.Left), int(d.Top), int(d.Right), int(d.Bottom)
-				cv2.rectangle(img_live, (left, top), (right, bottom), (0, 255, 0), 2)
+				cv2.rectangle(img, (left, top), (right, bottom), (0, 255, 0), 2)
 				object_x = int(round((d.Left + d.Right) / 2))  # update object x-coordinate
 			print("object at x: ", object_x)
+			#moving camera to centre object
 			if(time.time() > servo_cooldown):
 				rotate_servo(object_x)
-				servo_cooldown = (time.time() + 0.5)
+				servo_cooldown = (time.time() + 0.5) # gives servo time to move
+			
 			# Add timestamp at bottom left
 			cv2.putText(img_live,
 				time_stamp,
@@ -220,16 +240,16 @@ def live_cam():
 
 	except KeyboardInterrupt:
 		print("Process Ended by user")
-	finally:
+	finally:#tidying up program. ending processes used by peripherals
+		#prevents bugs/errors in future uses
 		del camera
 		time.sleep(0.5)
 		pwm.ChangeDutyCycle(7.5)
 		pwm.stop()
 		GPIO.cleanup()
 		cv2.destroyAllWindows()
-		print("Program terminated.")
-		
-		
+		print("Program terminated.")	
+			
 def main():
 	live_cam()
 	
