@@ -189,7 +189,8 @@ def live_cam():
 			jetson_utils.cudaDeviceSynchronize()
 			voltage = 0.0
 			voltage = read_voltage()
-			if(voltage >  0.1):
+			if(voltage >  0.1):")
+				record_video(net, camera)
 				servo_sweep()
 				time.sleep(0.2)
 			# Create small grayscale copy for motion detection (CPU)
