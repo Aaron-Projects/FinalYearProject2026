@@ -80,9 +80,15 @@ def servo_sweep():
 			time.sleep(0.01)
 		
 		print('Finished sweep')
-
+		pwm.ChangeDutyCycle(7.5)
+		time.sleep(0.1)
+		pwm.ChangeDutyCycle(0)
+		time.sleep(0.1)
 	except KeyboardInterrupt:
-		pwm.ChangeDutyCycle(7.5)	
+		pwm.ChangeDutyCycle(7.5)
+		time.sleep(0.1)
+		pwm.ChangeDutyCycle(0)
+		time.sleep(0.1)	
 		
 def read_voltage():
 	if(adcstatus == True):
