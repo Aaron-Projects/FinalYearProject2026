@@ -1,6 +1,6 @@
 # FinalYearProject2026  
 
-READ ME FOR FINAL YEAR PROJECT!!!
+README FOR FINAL YEAR PROJECT!
 -
 
 -Main.py --> Main file  
