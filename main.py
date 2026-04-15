@@ -50,7 +50,7 @@ def rotate_servo(x):
 		degree = max(2.5, min(degree, 12.5))  # prevents servo going too far
 
 		pwm.ChangeDutyCycle(degree)
-		time.sleep(0.05)
+		time.sleep(0.2)
 		pwm.ChangeDutyCycle(0)
 		time.sleep(0.2)  # Allow the servo to move
 		return 0
