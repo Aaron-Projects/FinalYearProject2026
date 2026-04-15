@@ -18,7 +18,7 @@ try:
 	adcstatus = True
 except:
 	print("ERROR: No ADC found, disabling ultrasonic detection")
-	adcstatus = False	#Prevents trying t take nonexistent voltage from pin
+	adcstatus = False	#Prevents trying to take nonexistent voltage from pin
 	
 
 #setting up servos
@@ -184,8 +184,8 @@ def live_cam():
 			voltage = 0.0
 			voltage = read_voltage()
 			if(voltage >  0.1):
-				sweep_servo()
-				time.wait(0.2)
+				servo_sweep()
+				time.sleep(0.2)
 			# Create small grayscale copy for motion detection (CPU)
 			try:
 				img_small = jetson_utils.cudaToNumpy(frame)
