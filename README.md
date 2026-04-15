@@ -10,8 +10,6 @@ READ ME FOR FINAL YEAR PROJECT!!!
 - 10 second cooldown between Recordings   
 - function for activating recording via ultrasonic input  
 
--BACKUPMain.py --> Backup in case something happens to "main" file.  
-
 -Videos:   
 - Project_video.mov --> Footage of servo rotating to track detected objects   
 - Recording_2026-03-18_08-25-09.avi --> Captured footage using "main.py" script to demonstrate    
