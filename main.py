@@ -43,10 +43,12 @@ def rotate_servo(x):
 		print("subject in target range!")
 		return 0
 	else:
+		#moving servo relative to center
+		#cooldown in parent function eliminates stuttering
 		if(x<480):
-			degree = ((480-x)/180)+2.5
+			degree = 7.5 + ((480-x)/180)
 		elif(x>480):
-			degree = ((x-480)/180)+2.5
+			degree = 7.5 - ((x-480)/180)
 		degree = max(2.5, min(degree, 12.5))  # prevents servo going too far
 
 		pwm.ChangeDutyCycle(degree)
