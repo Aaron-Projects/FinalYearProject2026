@@ -53,5 +53,5 @@ Prerequisite Libraries:
 -Jetson utils   
 -NUMPY   
 -DATETIME   
--TIME
+-TIME     
 -Adafruit_ADS1x15
