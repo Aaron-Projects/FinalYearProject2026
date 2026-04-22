@@ -9,12 +9,18 @@ import cv2
 import numpy as np
 import datetime
 import time
-import Adafruit_ADS1x15
-
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+#user must be added to 
 #Checks if adc is connected
 global adcstatus
 try:
-	adc = Adafruit_ADS1x15.ADS1115()
+	i2c = busio.I2C(board.SCL, board.SDA)
+	adc = ADS.ADS1115(i2c)
+	# Define the channel (A0 in your case)
+	adcIn = AnalogIn(adc, ADS.P0)
 	adcstatus = True
 except:
 	print("ERROR: No ADC found, disabling ultrasonic detection")
@@ -45,7 +51,9 @@ def rotate_servo(x):
 	else:
 		#moving servo relative to center
 		#cooldown in parent function eliminates stuttering
-		if(x<480):
+		if(x==0):
+			return 0
+		elif(x<480):
 			degree = 7.5 + ((480-x)/180)
 		elif(x>480):
 			degree = 7.5 - ((x-480)/180)
@@ -93,9 +101,7 @@ def servo_sweep():
 def read_voltage():
 	if(adcstatus == True):
 		# Read the ADC channel 0
-		value = adc.read_adc(0, gain=1)
-		# Convert raw value to voltage (ADS1115 is 16-bit)
-		voltage = value * (4.096 / 32767.0)
+		voltage = adcIn.voltage
 		return voltage
 	else:
 		return 0
@@ -189,10 +195,6 @@ def live_cam():
 			jetson_utils.cudaDeviceSynchronize()
 			voltage = 0.0
 			voltage = read_voltage()
-			if(voltage >  0.1):")
-				record_video(net, camera)
-				servo_sweep()
-				time.sleep(0.2)
 			# Create small grayscale copy for motion detection (CPU)
 			try:
 				img_small = jetson_utils.cudaToNumpy(frame)
@@ -216,7 +218,7 @@ def live_cam():
 			# Draw detections
 			for d in detections:
 				left, top, right, bottom = int(d.Left), int(d.Top), int(d.Right), int(d.Bottom)
-				cv2.rectangle(img, (left, top), (right, bottom), (0, 255, 0), 2)
+				cv2.rectangle(img_live, (left, top), (right, bottom), (0, 255, 0), 2)
 				object_x = int(round((d.Left + d.Right) / 2))  # update object x-coordinate
 			print("object at x: ", object_x)
 			#moving camera to centre object
@@ -237,13 +239,16 @@ def live_cam():
 			cv2.imshow("Live Camera", img_live)
 			
 			# Check cooldown and record if motion detected
-			if((motion) and (time.time() > motion_cooldown)):
-				print("Motion detected! Starting recording...")
+			if((motion or (voltage>0.1)) and (time.time() > motion_cooldown)):
+				if(motion):
+					print("Motion detected! Starting recording...")
+				elif(voltage>0.1):
+					print("Sound detected! Starting recording...")
 				cv2.destroyWindow("Live Camera")
 				record_video(net, camera)
 				motion_cooldown = time.time() + 18  # 10-second cooldown (8 seconds = recording length)
 				prev_gray = None  # reset previous frame after recording
-				
+	
 			if(cv2.waitKey(1) & 0xFF == ord('q')):
 				break
 
